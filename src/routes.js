@@ -1,15 +1,30 @@
-const express = require("express");
-const userController = require("./controller/userController");
-const login = require("./controller/loginController");
-const auth = require("./middleware/auth");
+const express = require("express")
+const userController = require("./controller/userController")
+const login = require("./controller/loginController")
+const verificarLogin = require("./middleware/auth")
+const validateRequestBody = require("./middleware/validateRequestBody")
+const { registerUserSchema, updateUserSchema } = require("./schemas/userSchema")
+const loginSchema = require("./schemas/schemaLogin")
+const multer = require("./services/multer")
 
-const rotas = express();
+const rotas = express()
 
-rotas.post("/usuario", userController.registerUser);
+rotas.post(
+  "/usuario",
+  validateRequestBody(registerUserSchema),
+  userController.registerUser
+)
 
-rotas.post("/login", login.login);
+rotas.post("/login", validateRequestBody(loginSchema), login.login)
 
-rotas.get("/usuario", userController.getUser);
-rotas.put("/usuario", userController.updateUser);
+rotas.use(verificarLogin)
 
-module.exports = rotas;
+rotas.get("/usuario", userController.getUser)
+rotas.put(
+  "/usuario",
+  validateRequestBody(updateUserSchema),
+  multer.single("imagem"),
+  userController.updateUser
+)
+
+module.exports = rotas

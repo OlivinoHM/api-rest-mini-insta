@@ -1,86 +1,121 @@
-const knex = require("../database/connection");
-const bcrypt = require("bcrypt");
+const knex = require("../database/connection")
+const bcrypt = require("bcrypt")
+const storage = require("../services/storage")
 
 const registerUser = async (req, res) => {
-	const { username, email, senha } = req.body;
+  const { nome, email, senha, username } = req.body
 
-	if (!username) {
-		return res.status(404).json("O campo username é obrigatório");
-	}
+  try {
+    const verificarUsuario = await knex("usuarios")
+      .where({ email, username: username.trim() })
+      .first()
 
-	if (!senha) {
-		return res.status(404).json("O campo senha é obrigatório");
-	}
+    if (verificarUsuario)
+      return res
+        .status(400)
+        .json({ message: "Email ou username informado já existe" })
 
-	if (senha.length < 5) return res.status(404).json("A senha deve conter no mínimo 5 caracteres.");
+    const senhaCriptografada = await bcrypt.hash(senha, 10)
 
-	try {
-		const quantidadeUsuarios = await knex("usuarios").where({ username }).first();
-		console.log(username, email, senha);
+    const usuario = await knex("usuarios")
+      .insert({
+        nome: nome.trim(),
+        email,
+        senha: senhaCriptografada,
+        username: username.trim(),
+      })
+      .returning("*")
 
-		if (quantidadeUsuarios) return res.status(400).json("O username informado já esxiste");
-
-		const senhaCriptografada = await bcrypt.hash(senha, 10);
-
-		const usuario = await knex("usuarios").insert({ username, senha: senhaCriptografada });
-
-		if (!usuario) {
-			return res.status(400).json("O usuário não foi cadastrado.");
-		}
-
-		return res.status(200).json("O usuario foi cadastrado com sucesso!");
-	} catch (error) {
-		return res.status(400).json(error.message);
-	}
-};
+    return res.status(201).json(usuario[0])
+  } catch (error) {
+    console.log(error)
+    return res.status(400).json(error.message)
+  }
+}
 
 const getUser = async (req, res) => {
-	return res.status(200).json(req.usuario);
-};
+  return res.status(200).json(req.usuario)
+}
 
 const updateUser = async (req, res) => {
-	const { nome, email, senha, imagem, username, site, bio, telefone, genero } = req.body;
+  const { nome, email, senha, imagem, username, site, bio, telefone, genero } =
+    req.body
+  const { originalname, mimetype, buffer } = req.file
 
-	const { id } = req.usuario;
+  const { id } = req.usuario
 
-	if (!nome && !email && !senha && !imagem && !username && !site && !bio && !telefone && !genero) {
-		return res.status(404).json("É obrigatório informar ao menos um campo para atualização");
-	}
+  if (
+    !nome &&
+    !email &&
+    !senha &&
+    !imagem &&
+    !username &&
+    !site &&
+    !bio &&
+    !telefone &&
+    !genero
+  ) {
+    return res
+      .status(404)
+      .json("É obrigatório informar ao menos um campo para atualização")
+  }
 
-	try {
-		if (senha) {
-			if (senha.length < 5) {
-				return res.status(404).json("A senha deve conter no minimo 5 caracteres.");
-			}
-		}
+  try {
+    if (email != req.usuario.email) {
+      const emailUsuarioExiste = await knex("usuarios").where({ email }).first()
 
-		if (email != req.usuario.email) {
-			const emailUsuarioExiste = await knex("usuarios").where({ email }).first();
+      if (emailUsuarioExiste) {
+        return res.status(404).json({ message: "O email já existe." })
+      }
+    }
+    if (username != req.usuario.username) {
+      const usernameUsuarioExistente = await knex("usuarios")
+        .where({ username: username.trim() })
+        .first()
 
-			if (emailUsuarioExiste) {
-				return res.status(404).json("O email já existe.");
-			}
-		}
-		if (username == req.usuario.username) {
-			const usernameUsuarioExistente = await knex("usuarios").where({ username }).first();
+      if (usernameUsuarioExistente) {
+        return res.status(404).json({ message: "O Username já existe." })
+      }
+    }
 
-			if (usernameUsuarioExistente) {
-				return res.status(404).json("O Username já existe.");
-			}
-		}
+    const senhaCriptografada = await bcrypt.hash(senha, 10)
 
-		const usuarioAtualizado = await knex("usuarios").where({ id }).update({ nome, email, senha, imagem, username, site, bio, telefone, genero });
+    let usuarioAtualizado = await knex("usuarios")
+      .where({ id })
+      .update({
+        nome: nome.trim(),
+        email,
+        senha: senhaCriptografada,
+        username: username.trim(),
+        site,
+        bio,
+        telefone,
+        genero,
+      })
+      .returning("*")
 
-		if (!usuarioAtualizado) return res.status(400).json("O usuario não foi atualizado.");
-
-		return res.status(200).json("Usuario foi atualizado com sucesso.");
-	} catch (error) {
-		return res.status(400).json(error.message);
-	}
-};
+    const imagem = await storage.uploadImagem(
+      `produtos/${id}/${originalname}`,
+      buffer,
+      mimetype
+    )
+    console.log(imagem.path)
+    usuarioAtualizado = await knex("usuarios")
+      .update({
+        imagem: imagem.path,
+        url_imagem: imagem.url,
+      })
+      .where({ id })
+      .returning("*")
+    console.log(usuarioAtualizado)
+    return res.status(200).json(usuarioAtualizado[0])
+  } catch (error) {
+    return res.status(400).json(error.message)
+  }
+}
 
 module.exports = {
-	registerUser,
-	getUser,
-	updateUser
-};
+  registerUser,
+  getUser,
+  updateUser,
+}

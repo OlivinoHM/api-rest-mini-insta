@@ -1,29 +1,31 @@
-const jwt = require("jsonwebtoken");
-const knex = require("../database/connection");
-const senhaHash = require("../passwordHash");
+const jwt = require("jsonwebtoken")
+const knex = require("../database/connection")
 
 const verificarLogin = async (req, res, next) => {
-	const { authorization } = req.headers;
+  const { authorization } = req.headers
 
-	if (!authorization) return res.status(401).json({ menssagem: "Não autorizado." });
+  if (!authorization)
+    return res.status(401).json({ message: "Não autorizado." })
 
-	const token = authorization.split(" ")[1];
+  const token = authorization.split(" ")[1]
 
-	try {
-		const { id } = jwt.verify(token, senhaHash);
+  try {
+    const { id } = jwt.verify(token, process.env.PASS_HASH)
 
-		const usuarioExiste = await knex("usuarios").where({ id }).first();
+    const usuarioExiste = await knex("usuarios").where({ id }).first()
 
-		if (!usuarioExiste) return res.suatus(404).json("Token inválido");
+    if (!usuarioExiste)
+      return res.suatus(404).json({ message: "Token inválido" })
 
-		const { senha, ...usuario } = usuarioExiste;
+    const { senha, ...usuario } = usuarioExiste
 
-		req.usuario = usuario;
+    req.usuario = usuario
 
-		next();
-	} catch (error) {
-		return res.status(400).json(error.message);
-	}
-};
+    next()
+  } catch (error) {
+    console.log()
+    return res.status(400).json(error.message)
+  }
+}
 
-module.exports = verificarLogin;
+module.exports = verificarLogin
