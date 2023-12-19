@@ -28,7 +28,6 @@ const registerUser = async (req, res) => {
 
     return res.status(201).json(usuario[0])
   } catch (error) {
-    console.log(error)
     return res.status(400).json(error.message)
   }
 }
@@ -95,11 +94,11 @@ const updateUser = async (req, res) => {
       .returning("*")
 
     const imagem = await storage.uploadImagem(
-      `produtos/${id}/${originalname}`,
+      `perfil/${id}/${originalname}`,
       buffer,
       mimetype
     )
-    console.log(imagem.path)
+
     usuarioAtualizado = await knex("usuarios")
       .update({
         imagem: imagem.path,
@@ -107,7 +106,7 @@ const updateUser = async (req, res) => {
       })
       .where({ id })
       .returning("*")
-    console.log(usuarioAtualizado)
+
     return res.status(200).json(usuarioAtualizado[0])
   } catch (error) {
     return res.status(400).json(error.message)
