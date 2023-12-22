@@ -7,7 +7,11 @@ const validateRequestBody = require("./middleware/validateRequestBody")
 const { registerUserSchema, updateUserSchema } = require("./schemas/userSchema")
 const loginSchema = require("./schemas/schemaLogin")
 const multer = require("./services/multer")
-const novaPostagemSchema = require("./schemas/schemaPostagem")
+const {
+  novaPostagemSchema,
+  validateImage,
+} = require("./schemas/schemaPostagem")
+const validateRequestFile = require("./middleware/validateRequestFile")
 
 const rotas = express()
 
@@ -31,11 +35,13 @@ rotas.put(
 
 rotas.post(
   "/postagem",
-  multer.array("file"),
+  multer.array("imagens"),
   validateRequestBody(novaPostagemSchema),
+  validateRequestFile(validateImage),
   postagem.novaPostagem
 )
 rotas.get("/postagem", postagem.feed)
+rotas.delete("/postagem/:id", postagem.deletePost)
 rotas.post("/postagem/:postagemId/curtir", postagem.curtir)
 rotas.post("/postagem/:postagemId/comentar", postagem.comentar)
 

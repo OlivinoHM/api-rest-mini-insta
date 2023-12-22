@@ -6,10 +6,10 @@ const novaPostagemSchema = joi.object({
     "string.empty": "O campo texto é obrigatório",
     "string.base": "O campo texto deve ser uma string",
   }),
-  imagens: joi.array().min(1).required().messages({
-    "any.required": "O campo imagens é obrigatório",
-    "array.min": "Pelo menos uma imagem deve ser fornecida",
-  }),
 })
 
-module.exports = novaPostagemSchema
+const validateImage = joi.array().items(joi.object().required()).messages({
+  "array.includesRequiredUnknowns": "Deve ser enviada pelo menos uma imagem.",
+})
+
+module.exports = { novaPostagemSchema, validateImage }

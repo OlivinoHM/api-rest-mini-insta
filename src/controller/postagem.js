@@ -16,40 +16,40 @@ const novaPostagem = async (req, res) => {
   // }
 
   try {
-    // const postagem = await knex("postagens")
-    //   .insert({ texto, usuario_id: idUsuario })
-    //   .returning("*")
+    const postagem = await knex("postagens")
+      .insert({ texto, usuario_id: idUsuario })
+      .returning("*")
 
-    // if (!postagem) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Não foi possivel concluir a postagem." })
-    // }
+    if (!postagem) {
+      return res
+        .status(400)
+        .json({ message: "Não foi possivel concluir a postagem." })
+    }
 
-    // for (const file of files) {
-    //   const imagem = await storage.uploadImagem(
-    //     `postagens/${postagem[0].id}/${file.originalname}`,
-    //     file.buffer,
-    //     file.mimetype
-    //   )
-    //   imagem.postagem_id = postagem[0].id
+    for (const file of files) {
+      const imagem = await storage.uploadImagem(
+        `postagens/${postagem[0].id}/${file.originalname}`,
+        file.buffer,
+        file.mimetype
+      )
+      imagem.postagem_id = postagem[0].id
 
-    //   const imagensCadastradas = await knex("postagem_imagens")
-    //     .insert({
-    //       imagens: imagem.path,
-    //       url_imagem: imagem.url,
-    //       postagem_id: imagem.postagem_id,
-    //     })
-    //     .returning("*")
+      const imagensCadastradas = await knex("postagem_imagens")
+        .insert({
+          imagens: imagem.path,
+          url_imagem: imagem.url,
+          postagem_id: imagem.postagem_id,
+        })
+        .returning("*")
 
-    //   if (!imagensCadastradas) {
-    //     await knex("postagens").where({ id: postagem[0].id }).del()
-    //     await storage.deletarArquivo(file)
-    //     return res
-    //       .status(400)
-    //       .json({ message: "Não foi possivel concluir a postagem." })
-    //   }
-    // }
+      if (!imagensCadastradas) {
+        await knex("postagens").where({ id: postagem[0].id }).del()
+        await storage.deletarArquivo(file)
+        return res
+          .status(400)
+          .json({ message: "Não foi possivel concluir a postagem." })
+      }
+    }
 
     return res.status(201).json({ message: "Postagem cadastrada com sucesso!" })
   } catch (error) {
@@ -138,6 +138,30 @@ const comentar = async (req, res) => {
   }
 }
 
+const deletePost = async (req, res) => {
+  const { id: idPost } = req.params
+
+  try {
+    if (!idPost) {
+      return res
+        .status(400)
+        .json({ message: "Necessário enviar o ID da postagem a ser deletada." })
+    }
+
+    const post = await knex("postagens").where({ id: idPost })
+
+    if (!post) {
+      return res.status(400).json({ message: "Postagem não encontrada" })
+    }
+
+    await knex("postagens").where({ id: idPost }).del()
+
+    return res.status(200).json({ message: "Postagem deletada com sucesso!" })
+  } catch (error) {
+    return res.status(400).json(error.message)
+  }
+}
+
 const feed = async (req, res) => {
   const { id } = req.usuario
   const { offset } = req.query
@@ -195,4 +219,5 @@ module.exports = {
   curtir,
   comentar,
   feed,
+  deletePost,
 }
